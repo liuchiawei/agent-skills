@@ -1,137 +1,59 @@
-# Reference: Project Code Examples
+# Reference: Google 3D Tiles + R3F + ECEF→ENU
 
-This file contains relevant code from the Tokyo Sounds project for Google 3D Tiles, R3F, and ECEF→ENU 座標系 correction.
+This skill is **project-agnostic**. All code lives in the [examples/](examples/) folder so you can copy it into any repo.
 
 ---
 
-## 1. Config: Origin and Tiles URL
+## 1. Example files (in this skill)
 
-**File:** `src/config/tokyo-config.ts`
+Full copy-paste examples are in [examples/](examples/). Mapping to your project:
+
+| Purpose                       | Example file                                                       | Your project path (suggestion)      |
+| ----------------------------- | ------------------------------------------------------------------ | ----------------------------------- |
+| Origin + tiles config         | [examples/config.ts](examples/config.ts)                           | `src/config/map-config.ts`          |
+| ECEF↔ENU matrix + transformer | [examples/ECEFtoENU.tsx](examples/ECEFtoENU.tsx)                   | `src/components/map/ECEFtoENU.tsx`  |
+| Geo utils (lat/lng↔ENU)       | [examples/geo-utils.ts](examples/geo-utils.ts)                     | `src/lib/geo-utils.ts`              |
+| Tiles scene                   | [examples/TilesScene.example.tsx](examples/TilesScene.example.tsx) | `src/components/map/TilesScene.tsx` |
+| Page (Canvas + scene)         | [examples/page.example.tsx](examples/page.example.tsx)             | Your app page (snippet)             |
+
+See [examples/README.md](examples/README.md) for copy-to-path mapping.
+
+---
+
+## 2. Config: origin and tiles URL
+
+Use **one origin** for the whole scene so ENU is consistent. Example shape (see [examples/config.ts](examples/config.ts)):
 
 ```ts
-export const TOKYO_CENTER = {
+export const SCENE_ORIGIN = {
   lat: 35.6762,
   lng: 139.6503,
-  alt: 500, // starting altitude in meters
+  alt: 0,
 };
 
-// Google Tiles API configuration
 export const GOOGLE_TILES_CONFIG = {
   rootUrl: "https://tile.googleapis.com/v1/3dtiles/root.json",
-  errorTarget: 12, // higher for photorealistic tiles
+  errorTarget: 12,
   maxDepth: 20,
 };
 ```
 
-Use one origin (e.g. `TOKYO_CENTER`) for the whole scene so ENU is consistent.
-
 ---
 
-## 2. ECEF → ENU Matrix and TilesTransformer
+## 3. ECEF → ENU matrix and TilesTransformer
 
-**File:** `src/components/city/GoogleTilesScene.tsx`
+- **Library ENU**: `WGS84_ELLIPSOID.getEastNorthUpFrame` gives ENU→ECEF (X=east, Y=north, Z=up). Invert for ECEF→ENU.
+- **Y-up remap**: Three.js convention is X=east, Y=up, Z=-north (north = -Z). Apply a fixed matrix so the tiles group uses this frame.
+- Apply the combined matrix to the **parent group** of `TilesRenderer` once on mount and set `matrixAutoUpdate = false`.
 
-Imports:
-
-```ts
-import { TilesRenderer, TilesPlugin } from "3d-tiles-renderer/r3f";
-import { WGS84_ELLIPSOID } from "3d-tiles-renderer/three";
-import {
-  GoogleCloudAuthPlugin,
-  GLTFExtensionsPlugin,
-} from "3d-tiles-renderer/plugins";
-```
-
-Build ECEF→ENU matrix with Y-up remap (X=east, Y=up, Z=-north):
-
-```ts
-/**
- * Build an ECEF -> local frame matrix using library ENU and a Y-up remap.
- * - getEastNorthUpFrame returns ENU->ECEF (X=east, Y=north, Z=up).
- * - We invert it for ECEF->ENU.
- * - Then apply a remap to match Three.js Y-up world: X=east, Y=up, Z=-north.
- */
-function createECEFtoENUMatrix(
-  centerLat: number,
-  centerLng: number,
-): THREE.Matrix4 {
-  const enuToECEF = new THREE.Matrix4();
-  const latRad = THREE.MathUtils.degToRad(centerLat);
-  const lngRad = THREE.MathUtils.degToRad(centerLng);
-  WGS84_ELLIPSOID.getEastNorthUpFrame(latRad, lngRad, 0, enuToECEF); // ENU -> ECEF (radians)
-
-  const ecefToENU = new THREE.Matrix4().copy(enuToECEF).invert(); // ECEF -> ENU (X=east, Y=north, Z=up)
-
-  const enuToYUp = new THREE.Matrix4().set(
-    1,
-    0,
-    0,
-    0,
-    0,
-    0,
-    1,
-    0, // Y <- Z (up)
-    0,
-    -1,
-    0,
-    0, // Z <- -Y (north -> -Z)
-    0,
-    0,
-    0,
-    1,
-  );
-
-  const transformMatrix = new THREE.Matrix4().multiplyMatrices(
-    enuToYUp,
-    ecefToENU,
-  );
-  return transformMatrix;
-}
-```
-
-Apply once to the group that wraps the tiles:
-
-```ts
-function TilesTransformer({
-  children,
-  groupRef,
-}: {
-  children: React.ReactNode;
-  groupRef?: React.RefObject<THREE.Group | null>;
-}) {
-  const internalRef = useRef<THREE.Group>(null);
-  const transformAppliedRef = useRef(false);
-  const ref = groupRef || internalRef;
-
-  useEffect(() => {
-    if (ref.current && !transformAppliedRef.current) {
-      const transformMatrix = createECEFtoENUMatrix(
-        TOKYO_CENTER.lat,
-        TOKYO_CENTER.lng
-      );
-      ref.current.matrix.copy(transformMatrix);
-      ref.current.matrixAutoUpdate = false;
-      transformAppliedRef.current = true;
-    }
-  }, [ref]);
-
-  return <group ref={ref as React.RefObject<THREE.Group>}>{children}</group>;
-}
-```
+Full implementation: [examples/ECEFtoENU.tsx](examples/ECEFtoENU.tsx) (`createECEFtoENUMatrix` + `TilesTransformer`).
 
 Scene usage: wrap `TilesRenderer` with the transformer and plugins:
 
 ```tsx
-<TilesTransformer groupRef={tilesGroupRef}>
-  <TilesRenderer
-    onLoadTileSet={handleLoadTileset}
-    onLoadError={handleLoadError}
-    onLoadModel={handleLoadModel}
-  >
-    <TilesPlugin
-      plugin={GLTFExtensionsPlugin}
-      args={{ dracoLoader: getDRACOLoader() }}
-    />
+<TilesTransformer originLat={SCENE_ORIGIN.lat} originLng={SCENE_ORIGIN.lng} groupRef={tilesGroupRef}>
+  <TilesRenderer url={GOOGLE_TILES_CONFIG.rootUrl} onLoadTileSet={...} onLoadError={...}>
+    <TilesPlugin plugin={GLTFExtensionsPlugin} args={{ dracoLoader: getDRACOLoader() }} />
     <TilesPlugin plugin={GoogleCloudAuthPlugin} args={{ apiToken: apiKey }} />
   </TilesRenderer>
 </TilesTransformer>
@@ -139,158 +61,33 @@ Scene usage: wrap `TilesRenderer` with the transformer and plugins:
 
 ---
 
-## 3. Geo Utils: Lat/Lng/Alt ↔ ECEF ↔ ENU
+## 4. Geo utils: lat/lng/alt ↔ ECEF ↔ ENU
 
-**File:** `src/lib/geo-utils.ts`
+Use the **same** origin as in `createECEFtoENUMatrix` for every `latLngAltToENU` and `enuToLatLngAlt` call.
 
-WGS84 constants:
+- **latLngAltToECEF** / **ecefToLatLngAlt**: WGS84 ellipsoid (see [examples/geo-utils.ts](examples/geo-utils.ts)).
+- **latLngAltToENU**: Geodetic → ENU with Y-up remap (X=east, Y=up, Z=-north).
+- **enuToLatLngAlt**: Inverse of above.
 
-```ts
-const WGS84_A = 6378137.0; // Semi-major axis (m)
-const WGS84_B = 6356752.314245; // Semi-minor axis (m)
-const WGS84_E2 = 1 - (WGS84_B * WGS84_B) / (WGS84_A * WGS84_A);
-```
-
-Geodetic → ECEF:
-
-```ts
-export function latLngAltToECEF(
-  lat: number,
-  lng: number,
-  alt: number = 0,
-): THREE.Vector3 {
-  const latRad = THREE.MathUtils.degToRad(lat);
-  const lngRad = THREE.MathUtils.degToRad(lng);
-  const sinLat = Math.sin(latRad);
-  const cosLat = Math.cos(latRad);
-  const N = WGS84_A / Math.sqrt(1 - WGS84_E2 * sinLat * sinLat);
-
-  const x = (N + alt) * cosLat * Math.cos(lngRad);
-  const y = (N + alt) * cosLat * Math.sin(lngRad);
-  const z = (N * (1 - WGS84_E2) + alt) * sinLat;
-
-  return new THREE.Vector3(x, y, z);
-}
-```
-
-Geodetic → ENU (same Y-up as tiles: X=east, Y=up, Z=-north):
-
-```ts
-export function latLngAltToENU(
-  lat: number,
-  lng: number,
-  alt: number,
-  originLat: number,
-  originLng: number,
-  originAlt: number = 0,
-): THREE.Vector3 {
-  const pointECEF = latLngAltToECEF(lat, lng, alt);
-  const originECEF = latLngAltToECEF(originLat, originLng, originAlt);
-  const diff = pointECEF.clone().sub(originECEF);
-
-  const latRad = THREE.MathUtils.degToRad(originLat);
-  const lngRad = THREE.MathUtils.degToRad(originLng);
-  const sinLat = Math.sin(latRad);
-  const cosLat = Math.cos(latRad);
-  const sinLng = Math.sin(lngRad);
-  const cosLng = Math.cos(lngRad);
-
-  const east = -sinLng * diff.x + cosLng * diff.y;
-  const north =
-    -sinLat * cosLng * diff.x - sinLat * sinLng * diff.y + cosLat * diff.z;
-  const up =
-    cosLat * cosLng * diff.x + cosLat * sinLng * diff.y + sinLat * diff.z;
-
-  // Remap to Three.js Y-up: X=east, Y=up, Z=-north (match GoogleTilesScene enuToYUp)
-  return new THREE.Vector3(east, up, -north);
-}
-```
-
-ENU → Geodetic (inverse of above convention):
-
-```ts
-export function enuToLatLngAlt(
-  enu: THREE.Vector3,
-  originLat: number,
-  originLng: number,
-  originAlt: number = 0,
-): { lat: number; lng: number; alt: number } {
-  const east = enu.x;
-  const up = enu.y;
-  const north = -enu.z; // Y-up remap: Z=-north
-
-  const latRad = THREE.MathUtils.degToRad(originLat);
-  const lngRad = THREE.MathUtils.degToRad(originLng);
-  const sinLat = Math.sin(latRad);
-  const cosLat = Math.cos(latRad);
-  const sinLng = Math.sin(lngRad);
-  const cosLng = Math.cos(lngRad);
-
-  const dx = -sinLng * east - sinLat * cosLng * north + cosLat * cosLng * up;
-  const dy = cosLng * east - sinLat * sinLng * north + cosLat * sinLng * up;
-  const dz = cosLat * north + sinLat * up;
-
-  const originECEF = latLngAltToECEF(originLat, originLng, originAlt);
-  const pointECEF = new THREE.Vector3(
-    originECEF.x + dx,
-    originECEF.y + dy,
-    originECEF.z + dz,
-  );
-
-  return ecefToLatLngAlt(pointECEF);
-}
-```
-
-Use the **same** `originLat` / `originLng` as in `createECEFtoENUMatrix` (e.g. `TOKYO_CENTER`).
+Full code: [examples/geo-utils.ts](examples/geo-utils.ts).
 
 ---
 
-## 4. Page: Canvas and GoogleTilesScene
+## 5. Page: Canvas and initial camera
 
-**File:** `src/app/(index)/page.tsx`
+- Put your tiles scene inside R3F `<Canvas>` with `logarithmicDepthBuffer` and large `far` for planet-scale.
+- Initial camera position: compute with `latLngAltToENU(lat, lng, alt, originLat, originLng, originAlt)` so the camera is in the same ENU frame as the transformed tiles.
 
-```tsx
-import { Canvas } from "@react-three/fiber";
-import { GoogleTilesScene } from "@/components/city/GoogleTilesScene";
-
-// ...
-
-<Canvas
-  shadows="soft"
-  camera={{
-    position: initialCameraPosition, // ENU position from latLngAltToENU(INITIAL_CAMERA, TOKYO_CENTER)
-    fov: 60,
-    near: 1,
-    far: 1e9,
-  }}
-  gl={{
-    logarithmicDepthBuffer: true,
-    antialias: false,
-    powerPreference: "high-performance",
-  }}
->
-  <Suspense fallback={<Loader />}>
-    <GoogleTilesScene
-      apiKey={ENV_MAPS_API_KEY}
-      onTilesLoaded={handleTilesLoaded}
-      onStatusChange={setStatus}
-      collisionGroupRef={collisionGroupRef}
-    />
-    {/* Other R3F objects (e.g. PlaneController) use ENU positions from latLngAltToENU */}
-  </Suspense>
-</Canvas>;
-```
-
-Initial camera position should be computed with `latLngAltToENU(INITIAL_CAMERA.lat, INITIAL_CAMERA.lng, INITIAL_CAMERA.alt, TOKYO_CENTER.lat, TOKYO_CENTER.lng, 0)` so it matches the transformed tiles.
+Example: [examples/page.example.tsx](examples/page.example.tsx).
 
 ---
 
-## 5. Summary: 座標系 Consistency
+## 6. Summary: 座標系 consistency
 
-| Item                         | Coordinate system                                              |
-| ---------------------------- | -------------------------------------------------------------- |
-| Google 3D Tiles (raw)        | ECEF                                                           |
-| Tiles after TilesTransformer | ENU at origin, Y-up (X=east, Y=up, Z=-north)                   |
-| Camera / entities / audio    | ENU via `latLngAltToENU(..., originLat, originLng, originAlt)` |
+| Item                      | Coordinate system                                              |
+| ------------------------- | -------------------------------------------------------------- |
+| Google 3D Tiles (raw)     | ECEF                                                           |
+| Tiles after transformer   | ENU at origin, Y-up (X=east, Y=up, Z=-north)                   |
+| Camera / entities / audio | ENU via `latLngAltToENU(..., originLat, originLng, originAlt)` |
 
-Keep **one** origin (e.g. `TOKYO_CENTER`) and use it in both `createECEFtoENUMatrix` and every `latLngAltToENU` / `enuToLatLngAlt` call.
+Keep **one** origin and use it in both `createECEFtoENUMatrix` (or `TilesTransformer`) and every `latLngAltToENU` / `enuToLatLngAlt` call.

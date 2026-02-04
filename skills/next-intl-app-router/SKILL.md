@@ -5,7 +5,9 @@ description: Configures and uses next-intl for Next.js App Router with locale-ba
 
 # next-intl (App Router)
 
-Setup and usage of `next-intl` with **prefix-based locale routing** (e.g. `/en/about`, `/ja/about`). Reference: this project (Tokyo Sounds).
+Setup and usage of `next-intl` with **prefix-based locale routing** (e.g. `/en/about`, `/ja/about`). Use this skill in any Next.js App Router project.
+
+**Example code:** Copy-paste examples live in this skill's [examples/](examples/) folder. See [examples/README.md](examples/README.md) for where each file goes in your project.
 
 ## File layout
 
@@ -127,13 +129,13 @@ export const { Link, redirect, usePathname, useRouter, getPathname } =
   createNavigation(routing);
 ```
 
-In components: import `Link` (and others) from `@/i18n/navigation`, **not** from `next/navigation` or `next/link`, for locale-aware URLs.
+In components: import `Link` (and others) from `@/i18n/navigation`, **not** from `next/navigation` or `next/link`, for locale-aware URLs. Example: [examples/Nav-client.tsx](examples/Nav-client.tsx), [examples/BackToHomeButton.tsx](examples/BackToHomeButton.tsx).
 
 ---
 
 ## 6. Locale layout and static rendering
 
-`app/[locale]/layout.tsx` must:
+`app/[locale]/layout.tsx` must (full file: [examples/app-locale-layout.tsx](examples/app-locale-layout.tsx)):
 
 1. Validate `locale` with `hasLocale` → `notFound()` if invalid.
 2. Call `setRequestLocale(locale)` for static rendering.
@@ -175,7 +177,7 @@ export default async function LocaleLayout({ children, params }: Props) {
 
 ## 7. Pages under `[locale]`
 
-For static rendering, every **page** under `[locale]` that uses next-intl must call `setRequestLocale(locale)` (and use `use(params)` if needed). Layout already sets it; pages that render server components using locale should set it too.
+For static rendering, every **page** under `[locale]` that uses next-intl must call `setRequestLocale(locale)` (and use `use(params)` if needed). Examples: [app-locale-page.tsx](examples/app-locale-page.tsx), [app-locale-about-page.tsx](examples/app-locale-about-page.tsx). (and use `use(params)` if needed). Layout already sets it; pages that render server components using locale should set it too.
 
 ```tsx
 // app/[locale]/page.tsx
@@ -291,5 +293,6 @@ One JSON file per locale under `messages/`. Nested keys map to namespaces and ke
 
 ## Reference
 
+- **Copy-paste examples:** [examples/](examples/) — standalone files for use in any project.
 - Extended config (localePrefix, pathnames, etc.): [reference.md](reference.md)
 - Official: [next-intl App Router](https://next-intl.dev/docs/getting-started/app-router), [Routing setup](https://next-intl.dev/docs/routing/setup)

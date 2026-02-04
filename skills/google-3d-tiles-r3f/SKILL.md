@@ -50,4 +50,5 @@ All other scene objects (camera, entities) should use the **same origin** and th
 
 ## Additional Resources
 
-- For full project code examples (ECEF→ENU matrix, TilesTransformer, geo-utils), see [reference.md](reference.md).
+- **[reference.md](reference.md)** — Concepts and 座標系 summary; all code lives in **examples/** so the skill is project-agnostic.
+- **[examples/](examples/)** — Copy-paste files: config, geo-utils, ECEF→ENU matrix + TilesTransformer, TilesScene, page snippet. See [examples/README.md](examples/README.md) for copy-to-path mapping.

@@ -1,18 +1,23 @@
 # next-intl App Router — Reference
 
-## Project file map (Tokyo Sounds)
+## Example files (in this skill)
 
-| Purpose                             | Path                                                                                                                        |
-| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
-| Plugin                              | `next.config.ts`                                                                                                            |
-| Routing config                      | `src/i18n/routing.ts`                                                                                                       |
-| Request / messages                  | `src/i18n/request.ts`                                                                                                       |
-| Navigation (Link, useRouter, etc.)  | `src/i18n/navigation.ts`                                                                                                    |
-| Middleware / proxy                  | `src/proxy.ts`                                                                                                              |
-| Locale layout + provider            | `src/app/[locale]/layout.tsx`                                                                                               |
-| Example pages with setRequestLocale | `src/app/[locale]/page.tsx`, `src/app/[locale]/about/page.tsx`, `src/app/[locale]/patch/page.tsx`                           |
-| Client translation usage            | `src/components/layout/nav.tsx`, `src/components/widget/BackToHomeButton.tsx`, `src/app/(index)/components/LandingPage.tsx` |
-| Messages                            | `messages/en.json`, `messages/ja.json`, `messages/zh-CN.json`, `messages/zh-TW.json`                                        |
+Full copy-paste examples live in the [examples/](examples/) folder. Mapping to your project:
+
+| Purpose                     | Example file                                                                                                       | Your project path                     |
+| --------------------------- | ------------------------------------------------------------------------------------------------------------------ | ------------------------------------- |
+| Plugin                      | [examples/next.config.ts](examples/next.config.ts)                                                                 | `next.config.ts`                      |
+| Routing config              | [examples/i18n/routing.ts](examples/i18n/routing.ts)                                                               | `src/i18n/routing.ts`                 |
+| Request / messages          | [examples/i18n/request.ts](examples/i18n/request.ts)                                                               | `src/i18n/request.ts`                 |
+| Navigation                  | [examples/i18n/navigation.ts](examples/i18n/navigation.ts)                                                         | `src/i18n/navigation.ts`              |
+| Middleware / proxy          | [examples/proxy.ts](examples/proxy.ts)                                                                             | `src/proxy.ts` or `src/middleware.ts` |
+| Locale layout + provider    | [examples/app-locale-layout.tsx](examples/app-locale-layout.tsx)                                                   | `src/app/[locale]/layout.tsx`         |
+| Index page                  | [examples/app-locale-page.tsx](examples/app-locale-page.tsx)                                                       | `src/app/[locale]/page.tsx`           |
+| About page                  | [examples/app-locale-about-page.tsx](examples/app-locale-about-page.tsx)                                           | `src/app/[locale]/about/page.tsx`     |
+| Client component (Link + t) | [examples/BackToHomeButton.tsx](examples/BackToHomeButton.tsx), [examples/Nav-client.tsx](examples/Nav-client.tsx) | Any client component                  |
+| Messages                    | [examples/messages-en.json](examples/messages-en.json)                                                             | `messages/en.json` (+ one per locale) |
+
+See [examples/README.md](examples/README.md) for copy-to-path mapping.
 
 ## defineRouting options
 
@@ -21,7 +26,7 @@ defineRouting({
   locales: ["en", "ja", "zh-CN", "zh-TW"],
   defaultLocale: "en",
   localePrefix: "as-needed", // or "always" | "never"
-  pathnames: { "/about": "/about", "/users": "/users" }, // optional locale-specific paths
+  pathnames: { "/about": "/about", "/users": "/users" }, // optional
 });
 ```
 
