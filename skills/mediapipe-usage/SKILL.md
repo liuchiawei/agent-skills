@@ -1,14 +1,15 @@
 ---
 name: mediapipe-usage
-description: Summarizes Google MediaPipe usage for web: Pose Landmarker with @mediapipe/tasks-vision, landmark indices, running modes, and patterns for real-time video. Use when working with MediaPipe, pose detection, body landmarks, or @mediapipe/tasks-vision.
+description: Provides guidance for Google MediaPipe Pose Landmarker on web using @mediapipe/tasks-vision. Covers setup, landmark indices, running modes, and real-time video patterns. Use when working with MediaPipe, pose detection, body landmarks, or @mediapipe/tasks-vision.
 ---
 
 # Google MediaPipe Usage (Web / Pose Landmarker)
 
-## When to Use This Skill
+## Quick Start
 
-- Using or debugging `@mediapipe/tasks-vision`, Pose Landmarker, or pose detection in a web app.
-- Needing the 33 pose landmark indices, skeleton connections, or mapping landmarks to gestures or control signals.
+1. Install `@mediapipe/tasks-vision`, resolve WASM from CDN
+2. Create `PoseLandmarker` with `createFromOptions`
+3. Use `detect()` for single image, or `detectForVideo()` in a throttled `requestAnimationFrame` loop
 
 ## Setup
 
@@ -104,6 +105,6 @@ requestAnimationFrame(detectLoop);
 
 ## Additional Resources
 
-- Full 33 landmark indices and skeleton connections: [reference.md](reference.md)
-- Minimal example, skeleton overlay, and landmark-to-control mapping: [examples.md](examples.md)
-- Official: [Pose Landmarker Web JS](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/web_js), [Setup guide for web](https://ai.google.dev/edge/mediapipe/solutions/setup_web)
+- For full 33 landmark indices and skeleton connections, see [reference.md](reference.md)
+- For minimal example, skeleton overlay, and landmark-to-control mapping, see [examples.md](examples.md)
+- Official docs: [Pose Landmarker Web JS](https://ai.google.dev/edge/mediapipe/solutions/vision/pose_landmarker/web_js), [Setup guide for web](https://ai.google.dev/edge/mediapipe/solutions/setup_web)
